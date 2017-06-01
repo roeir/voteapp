@@ -1,6 +1,9 @@
 import { Meteor } from 'meteor/meteor';
+import { check } from 'meteor/check';
 
 import { Polls } from './polls';
+import { Questions } from '../questions/questions';
+import { Answers } from '../answers/answers';
 
 
 Meteor.publish('polls.currentUser', function pollsCurrentUser() {
@@ -18,4 +21,37 @@ Meteor.publish('polls.public', function pollsPublic() {
   }
 
   return Polls.find({ isPublic: true });
+});
+
+
+Meteor.publishComposite('polls.details', function pollsDetails(pollId) {
+  check(pollId, String);
+
+  const { userId } = this;
+
+  if (!userId) {
+    return this.ready();
+  }
+
+  return {
+    find() {
+      return Polls.find({ _id: pollId });
+    },
+
+    children: [
+      {
+        find(poll) {
+          return Questions.find({ pollId: poll._id });
+        },
+
+        children: [
+          {
+            find(question) {
+              return Answers.find({ questionId: question._id });
+            },
+          },
+        ],
+      },
+    ],
+  };
 });
